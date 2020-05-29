@@ -10,6 +10,7 @@ using cw4.DTOs.Requests;
 using cw4.DTOs.Responses;
 using cw4.Models;
 using cw4.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace cw4.Controllers
@@ -28,158 +29,9 @@ namespace cw4.Controllers
 
         
         [HttpPost]
+        [Authorize(Roles = "employee")]
         public IActionResult EnrollStudent(EnrollStudentRequest request){
-            
-//         {
-//             var student = new Student();
-//             student.IndexNumber = request.IndexNumber;
-//             student.FirstName = request.FirstName;
-//             student.LastName = request.LastName;
-//             student.BirthDate = request.BirthDate;
-//             
-//             Enrollment enrollment = new Enrollment();
-//
-//             
-//             
-//             if (!ModelState.IsValid)
-//             {
-//                 var d = ModelState;
-//                 return BadRequest("!!!");
-//             }
-//
-//             using (var con = new SqlConnection(ConString))
-//             {
-//                 using (var com = new SqlCommand())
-//                 {
-//                     com.Connection = con;
-//                     con.Open();
-//
-//                     var transaction = con.BeginTransaction();
-//                     com.Transaction = transaction;
-//
-//                     try
-//                     {
-//                         Console.WriteLine(request.Studies);
-//                         // Sprawdzenie czy studia istnieją
-//                         com.CommandText = "SELECT IdStudy from studies where name = @name";
-//                         com.Parameters.AddWithValue("name", request.Studies);
-//
-//                         var dr = com.ExecuteReader();
-//
-//                         if (!dr.Read())
-//                         {
-//                             dr.Close();
-//                             transaction.Rollback();
-//                             return BadRequest("Studia nie istnieją");
-//                             //...
-//                         }
-//
-//                         int idStudies = (int) dr["IdStudy"];
-//                         dr.Close();
-//
-//                         enrollment.IdStudy = idStudies;
-//
-//
-//
-//                         // Odnalezienie najnowszego wpisu 
-//                         com.CommandText =
-//                             "SELECT * FROM ENROLLMENT WHERE IdEnrollment = (SELECT MAX(IdEnrollment) FROM Enrollment WHERE IdStudy = @idStudies AND Semester = 1);";
-//                         com.Parameters.AddWithValue("idStudies", idStudies);
-//                         var dr1 = com.ExecuteReader();
-//                         int idEnrollment;
-//                         // Sprawdzenie czy wpis istnieje, jeżeli nie, jestem zobowiązany go utworzyć
-//                         if (!dr1.Read())
-//                         {
-//                             dr1.Close();
-//                             com.CommandText = "SELECT MAX(IdEnrollment) + 1 FROM Enrollment";
-//                            idEnrollment = Convert.ToInt32(com.ExecuteScalar());
-//                            Console.WriteLine(idEnrollment);
-//                             DateTime myDateTime = DateTime.Now;
-//                             string dateFormat = myDateTime.ToString("yyyy-MM-dd");
-//                             Console.WriteLine(dateFormat);
-//                             Console.WriteLine(idStudies);
-//                         
-//                             com.CommandText =
-// //                                "INSERT INTO Enrollment (IdEnrollment, Semester, IdStudy, StartDate) VALUES ({idEnrollment},1,{idStudies}, '2000-12-12')";
-//                             "INSERT INTO Enrollment (IdEnrollment, Semester, IdStudy, StartDate) " +
-//                             $"VALUES ({idEnrollment},1,{idStudies}, '{dateFormat}')";
-//
-//                             // com.Parameters.AddWithValue("idEnrollment", idEnrollment);
-//                             // com.Parameters.AddWithValue("date", dateFormat);
-//                             // com.Parameters.AddWithValue("idStudies", idStudies);
-//                             com.ExecuteNonQuery();
-//                         
-//                             enrollment.Semester = 1;
-//                             enrollment.IdEnrollment = idEnrollment;
-//                             enrollment.IdStudy = idStudies;
-//                             enrollment.StartDate = myDateTime;
-//                         
-//                         }
-//                         else
-//                         {
-//                             idEnrollment = (int) dr1["IdEnrollment"];
-//                             enrollment.IdEnrollment = idEnrollment;
-//                             enrollment.Semester = (int) dr1["Semester"];
-//                             enrollment.IdStudy = (int) dr1["IdStudy"];
-//                             enrollment.StartDate = (DateTime) dr1["StartDate"];
-//                         
-//                         }
-//                         dr1.Close();
-//
-//                         
-//                         
-//                         // Sprawdzenie, czy student ma unikalne ID
-//                         com.CommandText = "SELECT * FROM Student WHERE IndexNumber = @index";
-//                         com.Parameters.AddWithValue("index", request.IndexNumber);
-//                         var dr3 = com.ExecuteReader();
-//                         if (dr3.Read())
-//                         {
-//                             dr3.Close();
-//                             transaction.Rollback();
-//                             return BadRequest("Numer indeksu nie jest unikalny");
-//                         }
-//                         
-//                         dr3.Close();
-//                         
-//                         
-//                         
-//                         
-//                         com.CommandText =
-//                             "INSERT INTO Student (IndexNumber, FirstName, LastName, BirthDate, IdEnrollment) VALUES (@studentindex, @fname, @lname, @dob, @idEnrollment)";
-//                         
-//                         
-//                         com.Parameters.AddWithValue("studentindex", request.IndexNumber);
-//                         com.Parameters.AddWithValue("fname", request.FirstName);
-//                         com.Parameters.AddWithValue("lname", request.LastName);
-//                         com.Parameters.AddWithValue("dob", request.BirthDate);
-//                         com.Parameters.AddWithValue("idEnrollment", idEnrollment);
-//                         
-//                         com.ExecuteNonQuery();
-//
-//                         transaction.Commit();
-//
-//                     }
-//                     catch (SqlException exc)
-//                     {
-//                         transaction.Rollback();
-//                         Console.WriteLine("SQL ERROR and rollback");
-//                         Console.WriteLine(exc);
-//
-//
-//                     }
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//                 }
-//             }
-
+ 
             if (!ModelState.IsValid) 
             {
                  var d = ModelState;
@@ -204,6 +56,7 @@ namespace cw4.Controllers
 
 
         [HttpPost("/api/enrollments/promotions")]
+        [Authorize(Roles = "employee")]
         public IActionResult PromoteStudents(PromoteStudentsRequest request)
         {
             

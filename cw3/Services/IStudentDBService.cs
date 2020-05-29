@@ -15,5 +15,11 @@ namespace cw4.Services
 
         Student GetStudent(string index);
 
+        string Login(LoginRequest request);
+
+        string UpdateToken(Guid refreshToken, string id);
+
+        string RefreshToken(string refresh);
+
     }
 }

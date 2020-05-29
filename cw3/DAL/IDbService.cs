@@ -17,7 +17,8 @@ namespace cw4.DAL
         //public void UpdateStudent(int id, Student student);
 
         //public void DeleteStudent(int id);
-       
 
+
+     
     }
 }

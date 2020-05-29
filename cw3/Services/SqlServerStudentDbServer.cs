@@ -4,11 +4,16 @@ using System.Data.SqlClient;
 using System.Data;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using cw4.DTOs.Requests;
 using cw4.DTOs.Responses;
 using cw4.Models;
+using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.IdentityModel.Claims;
 
 namespace cw4.Services
 {
@@ -35,7 +40,7 @@ namespace cw4.Services
 
                     try
                     {
-                        
+
                         // Sprawdzenie czy studia istnieją
                         com.CommandText = "SELECT IdStudy from studies where name = @name";
                         com.Parameters.AddWithValue("name", request.Studies);
@@ -55,7 +60,7 @@ namespace cw4.Services
                         int idStudies = (int) dr["IdStudy"];
                         dr.Close();
 
-                       // enrollment.IdStudy = idStudies;
+                        // enrollment.IdStudy = idStudies;
 
 
 
@@ -126,7 +131,7 @@ namespace cw4.Services
                             response.Message = "Numer indeksu nie jest unikalny!";
                             return response;
                         }
-                        
+
                         dr3.Close();
 
 
@@ -159,18 +164,18 @@ namespace cw4.Services
 
 
                     }
-                    
+
                 }
             }
 
             return response;
         }
-    
 
-    public PromoteStudentsResponse PromoteStudent(PromoteStudentsRequest request)
-    {
 
-        var response = new PromoteStudentsResponse();
+        public PromoteStudentsResponse PromoteStudent(PromoteStudentsRequest request)
+        {
+
+            var response = new PromoteStudentsResponse();
             using (var con = new SqlConnection(ConString))
             {
                 using (var com = new SqlCommand())
@@ -180,9 +185,9 @@ namespace cw4.Services
 
                     var transaction = con.BeginTransaction();
                     com.Transaction = transaction;
-                    
+
                     //1. Sprawdzam czy w tabeli enrollment istnieje wpis o podanej wartości Studies i Semester, W przeciwnym razie zwracam kod 404 Not Found
-                    
+
                     com.CommandText = "SELECT * FROM Enrollment" +
                                       " INNER JOIN Studies" +
                                       " ON Studies.IdStudy = Enrollment.IdStudy" +
@@ -201,8 +206,9 @@ namespace cw4.Services
 
                         return response;
                     }
+
                     dr.Close();
-                    
+
                     // Jeżeli wszystko poszło dobrze uruchamiam procedurę składową
 
                     com.CommandText = "promoteStudents";
@@ -226,45 +232,192 @@ namespace cw4.Services
             }
 
             return response;
-    }
+        }
 
-    public Student GetStudent(string index)
-    {
-       Console.WriteLine("Jestem w metodzie GEtStudent");
-        using (var con = new SqlConnection(ConString))
+        public Student GetStudent(string index)
         {
-            using (var com = new SqlCommand())
+            Console.WriteLine("Jestem w metodzie GEtStudent");
+            using (var con = new SqlConnection(ConString))
             {
-                com.Connection = con;
-                con.Open();
-
-                var transaction = con.BeginTransaction();
-                com.Transaction = transaction;
-                
-                com.CommandText = "SELECT * from student where IndexNumber = @index";
-                com.Parameters.AddWithValue("index", index);
-
-                var dr = com.ExecuteReader();
-
-                if (!dr.Read())
+                using (var com = new SqlCommand())
                 {
-                    Console.WriteLine("nie ma");
-                    dr.Close();
-                    return null;
-                }
-                var std = new Student();
-                std.IndexNumber = (string) dr["IndexNumber"];
-                std.FirstName = (string) dr["FirstName"];
-                std.LastName = (string) dr["LastName"];
-                std.BirthDate = (DateTime) dr["BirthDate"];
-                std.IdEnrollment = (int) dr["IdEnrollment"];
-                Console.WriteLine(std.FirstName);
-                dr.Close();
+                    com.Connection = con;
+                    con.Open();
 
-                return std;
+                    var transaction = con.BeginTransaction();
+                    com.Transaction = transaction;
+
+                    com.CommandText = "SELECT * from student where IndexNumber = @index";
+                    com.Parameters.AddWithValue("index", index);
+
+                    var dr = com.ExecuteReader();
+
+                    if (!dr.Read())
+                    {
+                        Console.WriteLine("nie ma");
+                        dr.Close();
+                        return null;
+                    }
+
+                    var std = new Student();
+                    std.IndexNumber = (string) dr["IndexNumber"];
+                    std.FirstName = (string) dr["FirstName"];
+                    std.LastName = (string) dr["LastName"];
+                    std.BirthDate = (DateTime) dr["BirthDate"];
+                    std.IdEnrollment = (int) dr["IdEnrollment"];
+                    Console.WriteLine(std.FirstName);
+                    dr.Close();
+
+                    return std;
+                }
             }
+        }
+
+        public string createPassword(string pass, string salt)
+        {
+            var valueBytes = KeyDerivation.Pbkdf2(
+
+                password: pass,
+                salt: Encoding.UTF8.GetBytes(salt),
+                prf: KeyDerivationPrf.HMACSHA512,
+                iterationCount: 100,
+                numBytesRequested: 256 / 8);
+            return Convert.ToBase64String(valueBytes);
+        }
+
+        public string Login(LoginRequest request)
+        {
+            var response = new StringBuilder();
+            var cmd1 = "SELECT * FROM STUDENT WHERE indexnumber =@login AND password IS NULL";
+            var cmd2 = "UPDATE student SET password = @ password, salt = @salt WHERE indexnumber = @login";
+            var cmd3 = "SELECT * FROM STUDENT WHERE indexnumber = @login";
+
+            using (var connection = new SqlConnection(ConString))
+            {
+                connection.Open();
+                string pass = null;
+                string salt = null;
+
+
+
+                using (var command = new SqlCommand(cmd1, connection))
+                {
+                    command.Parameters.AddWithValue("login", request.Login);
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            reader.Close();
+                            byte[] tmpSalt = new byte[128 / 8];
+                            using (var gen = RandomNumberGenerator.Create())
+                            {
+                                gen.GetBytes(tmpSalt);
+                            }
+
+                            salt = Convert.ToBase64String(tmpSalt);
+                            pass = createPassword(request.Password, salt);
+
+
+                        }
+                    }
+                }
+
+                if (pass != null)
+                {
+                    using (var command = new SqlCommand(cmd2, connection))
+                    {
+                        command.Parameters.AddWithValue("salt", salt);
+                        command.Parameters.AddWithValue("password", pass);
+                        command.Parameters.AddWithValue("login", request.Login);
+                        command.ExecuteNonQuery();
+
+
+
+                    }
+                }
+
+
+                using (var command = new SqlCommand(cmd3, connection))
+                {
+                    command.Parameters.AddWithValue("login", request.Login);
+
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.Read())
+                        {
+                            return "Blad:";
+                        }
+
+                        response.Append("Connected:");
+                        salt = reader["salt"].ToString();
+                        pass = reader["pass"].ToString();
+                    }
+                }
+
+                if (!createPassword(request.Password, salt).Equals(pass)) 
+                    {
+                        return "Blad:";
+                    }
+                    return (request.Password + " " + createPassword(request.Password, salt));
+
+
+
+                  //  return "Connect: ";
+                
+
+             
+
+            }
+            return null;
+        }
+        
+        
+        public string RefreshToken(string token)
+        {
+            var cmd = "SELECT * FROM Student WHERE refresh = @token";
+            using (var connection = new SqlConnection(ConString)) 
+            {
+                connection.Open();
+                using (var command = new SqlCommand(cmd, connection))
+                {
+                    command.Parameters.AddWithValue("token", token);
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.Read())
+                        {
+                            return "Blad: ";
+                        }
+                    }
+                }
+                
+                
+            }
+
+            return "Connected: ";
+        }
+
+
+        public string UpdateToken(Guid refreshToken, string id)
+        {
+            var cmd = "UPDATE Student SET refresh = @refresh WHERE indexNumber = @id";
+            using (var connection = new SqlConnection(ConString))
+            {
+                connection.Open();
+                using (var command = new SqlCommand(cmd, connection))
+                {
+                    command.Parameters.AddWithValue("refresh", refreshToken);
+                    command.Parameters.AddWithValue("id", id);
+                    command.ExecuteNonQuery();
+                    return "JD";
+                }
+            }
+
         }
     }
     
-    }
+    
+ 
+    
 }

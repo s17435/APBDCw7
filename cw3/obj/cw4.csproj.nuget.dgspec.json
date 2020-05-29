@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/Users/karol/APBD/APBDcw6/cw3/cw4.csproj": {}
+    "/Users/karol/APBD/APBDcw7/cw3/cw4.csproj": {}
   },
   "projects": {
-    "/Users/karol/APBD/APBDcw6/cw3/cw4.csproj": {
+    "/Users/karol/APBD/APBDcw7/cw3/cw4.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/karol/APBD/APBDcw6/cw3/cw4.csproj",
+        "projectUniqueName": "/Users/karol/APBD/APBDcw7/cw3/cw4.csproj",
         "projectName": "cw4",
-        "projectPath": "/Users/karol/APBD/APBDcw6/cw3/cw4.csproj",
+        "projectPath": "/Users/karol/APBD/APBDcw7/cw3/cw4.csproj",
         "packagesPath": "/Users/karol/.nuget/packages/",
-        "outputPath": "/Users/karol/APBD/APBDcw6/cw3/obj/",
+        "outputPath": "/Users/karol/APBD/APBDcw7/cw3/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/karol/.config/NuGet/NuGet.Config"
@@ -36,9 +36,25 @@
       "frameworks": {
         "netcoreapp3.1": {
           "dependencies": {
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[3.1.4, )"
+            },
+            "Microsoft.IdentityModel": {
+              "target": "Package",
+              "version": "[7.0.0, )"
+            },
+            "Microsoft.IdentityModel.Tokens": {
+              "target": "Package",
+              "version": "[6.6.0, )"
+            },
             "System.Data.SqlClient": {
               "target": "Package",
               "version": "[4.8.1, )"
+            },
+            "System.IdentityModel.Tokens.Jwt": {
+              "target": "Package",
+              "version": "[6.6.0, )"
             }
           },
           "imports": [
@@ -59,7 +75,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/3.1.201/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/3.1.202/RuntimeIdentifierGraph.json"
         }
       }
     }

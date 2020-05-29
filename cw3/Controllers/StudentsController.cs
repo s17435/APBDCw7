@@ -1,11 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
 using cw4.DAL;
+using cw4.DTOs.Requests;
 using cw4.Models;
+using cw4.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+
+
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -22,12 +32,16 @@ namespace cw4.Controllers
         //private const string ConString = "Server=jdbc:jtds:sqlserver://db-mssql.pjwstk.edu.pl/s17435; Initial Catalog=s17435; User ID=s17435; Password= ";
 
 
-        private IDbService _dbService;
 
 
+        public IConfiguration Configuration { get; set; }
 
-        public StudentsController(IDbService dbService)
+        private IStudentDBService _dbService;
+
+
+        public StudentsController(IConfiguration configuration, IStudentDBService dbService)
         {
+            Configuration = configuration;
             _dbService = dbService;
       
 
@@ -148,76 +162,96 @@ namespace cw4.Controllers
 
 
 
+        [HttpPost]
+        public IActionResult Login(LoginRequest request)
+        {
 
-
-        //[HttpPost]
-        //public IActionResult CreateStudent(Student student)
-        //{
-        //    student.IndexNumber = $"s{new Random().Next(1, 20000)}";
-        //    _dbService.AddStudent(student);
-
-
-        //    return Ok(student);
-        //}
-
-
-        //[HttpPut("{id}")]
-        //public IActionResult UpdateStudent(int id, Student tmpstudent)
-        //{
-
-        //    Student existingstudent = _dbService.GetStudentById(id);
-
-        //    if (existingstudent is null)
-        //    {
-        //        return NotFound("Nie ma ucznia o takim id");
-        //    }
-        //    else
-        //    {
-
-        //        _dbService.UpdateStudent(id, tmpstudent);
-
-        //        return Ok("Aktualizacja dokończona");
-        //    }
+            string result = _dbService.Login(request);
+            if (result.Contains("Blad:"))
+                return Unauthorized("require login and password");
 
 
 
-        //}
+            var claims = new[] {
+
+                new Claim(ClaimTypes.NameIdentifier,"1"),
+                new Claim(ClaimTypes.Name, "jan123"),
+                new Claim(ClaimTypes.Role, "admin"),
+                new Claim(ClaimTypes.Role, "student")
+            };
+
+            
+            
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["!!81Secret27bwsdfgh8"]));
+
+            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            
+            var token = new JwtSecurityToken
+            (
+                issuer: "Gakko",
+                audience: "Students",
+                claims: claims,
+                expires: DateTime.Now.AddMinutes(10),
+                signingCredentials: credentials
+            );
+
+            var jwt = new
+            {
+                token = new JwtSecurityTokenHandler().WriteToken(token),
+                refreshToken = Guid.NewGuid()
+            };
+
+            string s = _dbService.UpdateToken(jwt.refreshToken,request.Login);
 
 
+            return Ok(jwt);
 
-        ////[HttpPut("{id}")]
-        ////public IActionResult UpdateStudent(int id)
-        ////{
-
-        ////    return Ok("Aktualizacja dokończona");
-        ////}
+        }
 
 
+       
+        [HttpPost("refreshjwt/{token}")]
+        public IActionResult Refresh(string token)
+        {
+            var result = _dbService.RefreshToken(token);
+            if (result.Contains("Blad:"))
+            {
+                return Unauthorized("Zły JWT");
+            }
+            
+            
+            
+            var claims = new[] {
 
+                new Claim(ClaimTypes.NameIdentifier,"1"),
+                new Claim(ClaimTypes.Name, "jan123"),
+                new Claim(ClaimTypes.Role, "admin"),
+                new Claim(ClaimTypes.Role, "student"),
+                new Claim(ClaimTypes.Role, "employee")
+            };
+            
+            
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["!!81Secret27bwsdfgh8"]));
+            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            
+            var tmptoken = new JwtSecurityToken(
+                issuer: "Gakko",
+                audience: "Students",
+                claims: claims,
+                expires: DateTime.Now.AddMinutes(10),
+                signingCredentials: credentials
+                
+                );
 
-        //[HttpDelete("{id}")]
-        //public IActionResult DeleteStudent(int id)
-        //{
-        //    Student existingstudent = _dbService.GetStudentById(id);
+            var jwt = new
+            {
+                token = new JwtSecurityTokenHandler().WriteToken(tmptoken),
+                refreshToken = Guid.NewGuid()
+            };
 
-        //    if (existingstudent is null)
-        //    {
-        //        return NotFound("Nie ma ucznia o takim id");
-        //    } else
-        //    {
-        //        _dbService.DeleteStudent(id);
+            return Ok(jwt);
+        }
 
-        //        return Ok("Usuwanie ukończone");
-        //    }
-
-
-        //}
-
-        //[HttpDelete("{id}")]
-        //public IActionResult DeleteStudent(int id)
-        //{
-        //    return Ok("Usuwanie ukończone");
-        //}
 
 
     }
